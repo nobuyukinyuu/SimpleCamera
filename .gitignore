@@ -1,0 +1,16 @@
+# Ignore the build folder
+*.build*/
+
+# Ignore the docs folder
+/*.docs/
+
+# Ignore Jungle IDE files
+
+*.jipo
+*.JILayout
+
+# Ignore thumbs
+Thumbs.db
+
+# Ignore debug log
+debug.log
