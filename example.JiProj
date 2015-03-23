@@ -15,7 +15,7 @@
         <Y>0</Y>
       </CursorPos>
     </Document>
-    <Document Filename=".\SimpleCamera\simplecamera.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
+    <Document Filename=".\SimpleCamera\SimpleCamera.monkey" Open="false" SplitView="false" SplitIsVertical="false" SplitSize="150">
       <DocGUID />
       <CursorPos>
         <X>0</X>
@@ -30,7 +30,7 @@
       </CursorPos>
     </Document>
   </Files>
-  <CompilerConfig Configuration="debug" BuildMode="run" Target="Html5_Game" />
+  <CompilerConfig Configuration="debug" BuildMode="run" Target="Desktop_Game_(Glfw3)" />
   <Version Major="15" Minor="3" Revision="12" Build="65" ProductName="Untitled product" />
   <PreBuildCommands />
 </JiProj>

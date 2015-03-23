@@ -2,17 +2,129 @@ Import mojo
 Import focalpoint
 
 Class Camera
-	Field x:Float, y:Float
+  Private
+	Field __filterX:Float, __filterY:Float  'Debug display for filtering amount currently being applied.
+  Public
+	Field x:Float, y:Float   'The filtered x/y position of this camera.
 	Field focalPoints:= New Stack<FocalPoint>
 	
-	Field xConstraint:Float, yConstraint:Float
-	Field xConstraintPad:Float, yConstraintPad:Float
+	Field xRoam:Float, yRoam:Float  'Percentage of screen space "slack" allowed before the camera starts to pan.
+	Field xRoamPad:Float, yRoamPad:Float  'Amount of padding added to filter the camera's pan response.
 	Field zConstraint:Float
 
-
+	Field filterX:Float, filterY:Float  'Amount to filter the camera's position by default.  From [0-1).
+	Field filterSnap:Float = 0.002  'How close the filtering should be to 1 before filtering is disabled.
 	
 	Method Update:Void()
+			If focalPoints.IsEmpty Then Return
+	
+			Local panw:Float = xRoam * DeviceWidth() * 0.5  'Roam distance, in px
+			Local panh:Float = yRoam * DeviceHeight() * 0.5
+			Local padw:Float = xRoamPad * DeviceWidth() * 0.5  'Pad distance, in px
+			Local padh:Float = yRoamPad * DeviceHeight() * 0.5
+					
+			If focalPoints.Length = 1
+				Local o:FocalPoint = focalPoints.Get(0)
+								
+				'Check to see if our focal point is outside of the roaming range.
+				'Determine the filtering amount based on the distance from the pad border.
+				'Filtering should range between 1 (no padding at all) to filterX.
+				Local dist:Float = o.FocalX() -x
+				Local sign:Int = Sgn(dist)
+				Local filterAmt:Float = 1
+				
+				If Abs(dist) > panw And padw > 0
+					'Based on the direction the camera needs to travel, we need to take the roam length out of our distance value.
+					dist -= (panw * sign)
+					'Now, we lerp the filtering amount between 1 and filterX.
+					filterAmt = Lerp(1, filterX, Clamp(Abs(dist / padw), 0.0, 1.0))
+					filterAmt = Snap(filterAmt)
+	
+					x = Xerp(o.FocalX + dist - (panw * sign), x, filterAmt)
+				ElseIf padw = 0  'No padding.
+					If Abs(dist) > panw Then filterAmt = filterX Else filterAmt = 1
+					x = Lerp(x + dist - (panw * sign), x, filterAmt)
+				End If
+				
+				__filterX = filterAmt
+				
+				'Do the same thing for the Y-Axis.
+				 dist = o.FocalY() -y
+				 sign = Sgn(dist)
+				 filterAmt = 1
+					
+				If Abs(dist) > panh And padh > 0
+					dist -= (panh * sign)
+					filterAmt = Lerp(1, filterY, Clamp(Abs(dist / padh), 0.0, 1.0))
+					filterAmt = Snap(filterAmt)
+
+					y = Xerp(o.FocalY + dist - (panh * sign), y, filterAmt)
+				ElseIf padh = 0  'No padding.
+					If Abs(dist) >= panh Then filterAmt = filterY Else filterAmt = 1
+					y = Lerp(y + dist - (panh * sign), y, filterAmt)
+				End If
+				
+				__filterY = filterAmt
+
+			Else   'Multiple focal points.  Find center of bounding box.
 			
+			End If
+	End Method
+	
+	'Summary:  Changes the global matrix to focus on this camera's FocalPoints.
+	Method Focus:Void()
+		SetMatrix(1, 0, 0, 1, -x + DeviceWidth() / 2, -y + DeviceHeight() / 2)
+		'Translate(-x, -y)
+	End Method
+	
+	'Summary:  Debug way to see where the roam constraints are.
+	Method RenderDebug:Void()
+		Local w:Float = xRoam * DeviceWidth() * 0.5
+		Local h:Float = yRoam * DeviceHeight() * 0.5
+		Local w2:Float = (xRoam + xRoamPad) * DeviceWidth() * 0.5  'Pad
+		Local h2:Float = (yRoam + yRoamPad) * DeviceHeight() * 0.5
+		Local cx:Float = DeviceWidth() / 2
+		Local cy:Float = DeviceHeight() / 2
+		
+		PushMatrix()
+			SetMatrix(1, 0, 0, 1, 0, 0)
+			SetAlpha(0.5); SetColor(0, 255, 255)
+			DrawLine(cx - w, 0, cx - w, DeviceHeight())
+			DrawLine(cx + w, 0, cx + w, DeviceHeight())
+			DrawLine(0, cy - h, DeviceWidth(), cy - h)
+			DrawLine(0, cy + h, DeviceWidth(), cy + h)
+			
+			SetColor(0, 255, 0)
+			DrawLine(cx - w2, cy - h2, cx - w2, cy + h2)
+			DrawLine(cx + w2, cy - h2, cx + w2, cy + h2)
+			DrawLine(cx - w2, cy - h2, cx + w2, cy - h2)
+			DrawLine(cx - w2, cy + h2, cx + w2, cy + h2)
+			
+			SetAlpha(1); SetColor(255, 255, 255)
+			
+			DrawText(x + "," + y, 8, 8)
+			DrawText(__filterX + "," + __filterY, 8, 24)
+
+		PopMatrix()
+	End Method
+	
+	
+	'Summary:  Sets the filtering amount.  Set expScale to FALSE to disable exponential scaling
+	Method SetFilter:Void(amt:Float, expScale:Bool = True)
+		If expScale Then amt = -Pow( (Clamp(amt, 0.0, 1.0) + 1), -7) + 1
+		filterX = amt; filterY = amt
+	End Method
+	Method SetFilter:Void(amtX:Float, amtY:Float, expScale:Bool = True)
+		If expScale Then
+			amtX = -Pow( (Clamp(amtX, 0.0, 1.0) + 1), -7) + 1
+			amtY = -Pow( (Clamp(amtY, 0.0, 1.0) + 1), -7) + 1
+		End If
+		filterX = amtX; filterY = amtY
+	End Method
+	
+	'Summary:  Snaps an amount based on filterSnap to 
+	Method Snap:Float(amt:Float)
+		If filterSnap + amt >= 1.0 Then Return 1.0 Else Return amt
 	End Method
 	
 	'Summary:  Returns a Float[x,y,w,h] of the minimum bounding box covering all FocalPoints in a stack.
@@ -34,5 +146,21 @@ Class Camera
 		Next
 		
 		Return out
+	End Function
+
+	'Summary:  Distance squared.  Faster than performing a distance calc for comparing lengths.
+	Function DistSq(x:Float, y:Float, x2:Float, y2:Float)
+		 Return (x2 - x) * (x2 - x) + (y2 - y) * (y2 - y)
+	End Function
+		
+	'Summary:  Linearly interpolates from x to y.
+	Function Lerp:Float(x:Float, y:Float, amt:Float = 0.5)
+		Return x + amt * (y - x)
+	End Function
+	
+	'Summary:  Performs a Lerp after exponentially weighting the amount.
+	Function Xerp:Float(x:Float, y:Float, amt:Float)
+		amt = Clamp(-Pow( (Clamp(amt, 0.0, 1.0) + 1), -7) + 1, 0.0, 1.0)
+		Return Lerp(x, y, amt)
 	End Function
 End Class
