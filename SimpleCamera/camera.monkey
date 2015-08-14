@@ -122,7 +122,7 @@ Class Camera
 		filterX = amtX; filterY = amtY
 	End Method
 	
-	'Summary:  Snaps an amount based on filterSnap to 
+	'Summary:  Snaps an amount based on filterSnap to 1.0 (no movement) if within range of the roam boundry.
 	Method Snap:Float(amt:Float)
 		If filterSnap + amt >= 1.0 Then Return 1.0 Else Return amt
 	End Method
