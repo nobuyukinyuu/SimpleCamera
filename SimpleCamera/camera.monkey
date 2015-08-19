@@ -4,7 +4,9 @@ Import focalpoint
 Class Camera
   Private
 	Field __filterX:Float, __filterY:Float  'Debug display for filtering amount currently being applied.
+	Field original_matrix:Float[]           'Cache for the global matrix used before we applied Focus()
   Public
+  	Field viewPortW:Int = DeviceWidth(), viewPortH:Int = DeviceHeight()
 	Field x:Float, y:Float   'The filtered x/y position of this camera.
 	Field focalPoints:= New Stack<FocalPoint>
 	
@@ -15,13 +17,20 @@ Class Camera
 	Field filterX:Float, filterY:Float  'Amount to filter the camera's position by default.  From [0-1).
 	Field filterSnap:Float = 0.002  'How close the filtering should be to 1 before filtering is disabled.
 	
+	'TODO:  Delta timed position filtering
+	Field timeBase:= New FloatObject(1.0)   'Delta time reference.  Replace this with your own delta time reference!
+	
+	Method New(viewport_width:Int, viewport_height:Int)
+		viewPortW = viewport_width; viewPortH = viewport_height
+	End Method
+	
 	Method Update:Void()
 			If focalPoints.IsEmpty Then Return
 	
-			Local panw:Float = xRoam * DeviceWidth() * 0.5  'Roam distance, in px
-			Local panh:Float = yRoam * DeviceHeight() * 0.5
-			Local padw:Float = xRoamPad * DeviceWidth() * 0.5  'Pad distance, in px
-			Local padh:Float = yRoamPad * DeviceHeight() * 0.5
+			Local panw:Float = xRoam * viewPortW * 0.5  'Roam distance, in px
+			Local panh:Float = yRoam * viewPortH * 0.5
+			Local padw:Float = xRoamPad * viewPortW * 0.5  'Pad distance, in px
+			Local padh:Float = yRoamPad * viewPortH * 0.5
 					
 			If focalPoints.Length = 1
 				Local o:FocalPoint = focalPoints.Get(0)
@@ -73,26 +82,30 @@ Class Camera
 	
 	'Summary:  Changes the global matrix to focus on this camera's FocalPoints.
 	Method Focus:Void()
-		SetMatrix(1, 0, 0, 1, -x + DeviceWidth() / 2, -y + DeviceHeight() / 2)
-		'Translate(-x, -y)
+		original_matrix = GetMatrix()
+
+		''TODO:  Implement zoom
+		'Transform(1, 0, 0, 1, -x + viewPortW / 2, -y + viewPortH / 2)
+		Translate(-x + viewPortW / 2, -y + viewPortH / 2)
+	End Method
+	Method UnFocus:Void()
+		SetMatrix(original_matrix)
 	End Method
 	
 	'Summary:  Debug way to see where the roam constraints are.
 	Method RenderDebug:Void()
-		Local w:Float = xRoam * DeviceWidth() * 0.5
-		Local h:Float = yRoam * DeviceHeight() * 0.5
-		Local w2:Float = (xRoam + xRoamPad) * DeviceWidth() * 0.5  'Pad
-		Local h2:Float = (yRoam + yRoamPad) * DeviceHeight() * 0.5
-		Local cx:Float = DeviceWidth() / 2
-		Local cy:Float = DeviceHeight() / 2
+		Local w:Float = xRoam * viewPortW * 0.5
+		Local h:Float = yRoam * viewPortH * 0.5
+		Local w2:Float = (xRoam + xRoamPad) * viewPortW * 0.5  'Pad
+		Local h2:Float = (yRoam + yRoamPad) * viewPortH * 0.5
+		Local cx:Float = viewPortW / 2
+		Local cy:Float = viewPortH / 2
 		
-		PushMatrix()
-			SetMatrix(1, 0, 0, 1, 0, 0)
 			SetAlpha(0.5); SetColor(0, 255, 255)
-			DrawLine(cx - w, 0, cx - w, DeviceHeight())
-			DrawLine(cx + w, 0, cx + w, DeviceHeight())
-			DrawLine(0, cy - h, DeviceWidth(), cy - h)
-			DrawLine(0, cy + h, DeviceWidth(), cy + h)
+			DrawLine(cx - w, 0, cx - w, viewPortH)
+			DrawLine(cx + w, 0, cx + w, viewPortH)
+			DrawLine(0, cy - h, viewPortW, cy - h)
+			DrawLine(0, cy + h, viewPortW, cy + h)
 			
 			SetColor(0, 255, 0)
 			DrawLine(cx - w2, cy - h2, cx - w2, cy + h2)
@@ -104,8 +117,6 @@ Class Camera
 			
 			DrawText(x + "," + y, 8, 8)
 			DrawText(__filterX + "," + __filterY, 8, 24)
-
-		PopMatrix()
 	End Method
 	
 	

@@ -30,6 +30,9 @@ Class Game Extends App
 		cam.xRoamPad = 0.5
 		cam.yRoamPad = 0.5
 		cam.SetFilter(0.2, False)
+		
+		'This is required since if you initialize the camera before mojo's ready, viewport dimensions will be 0,0
+		cam.viewPortW = DeviceWidth(); cam.viewPortH = DeviceHeight()
 	End
 	
 	Method OnUpdate()
@@ -46,7 +49,6 @@ Class Game Extends App
 	Method OnRender()
 		Cls()
 		
-		PushMatrix()
 		cam.Focus()
 		
 		'Render playfield bg
@@ -84,8 +86,8 @@ Class Game Extends App
 				
 		DrawCircle(b.x, b.y, 16)
 		
-		PopMatrix()
-		
+		cam.UnFocus()
+				
 		If showDebug Then cam.RenderDebug()
 		DrawText("Press SPACEBAR to toggle cam boundary rendering", DeviceWidth() -8, DeviceHeight() -8, 1, 1)
 	End
