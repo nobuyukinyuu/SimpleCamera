@@ -30,6 +30,10 @@ Class Game Extends App
 		cam.xRoamPad = 0.5
 		cam.yRoamPad = 0.5
 		cam.SetFilter(0.2, False)
+		cam.xConstraintMin = -64
+		cam.yConstraintMin = -64
+		cam.xConstraintMax = PLAYFIELD_W + 64
+		cam.yConstraintMax = PLAYFIELD_H + 64
 		
 		'This is required since if you initialize the camera before mojo's ready, viewport dimensions will be 0,0
 		cam.viewPortW = DeviceWidth(); cam.viewPortH = DeviceHeight()

@@ -12,6 +12,9 @@ Class Camera
 	
 	Field xRoam:Float, yRoam:Float  'Percentage of screen space "slack" allowed before the camera starts to pan.
 	Field xRoamPad:Float, yRoamPad:Float  'Amount of padding added to filter the camera's pan response.
+	Field xConstraintMin:Float = $80000000, yConstraintMin:Float = $80000000
+	Field xConstraintMax:Float = $7FFFFFFF, yConstraintMax:Float = $7FFFFFFF
+	
 	Field zConstraint:Float
 
 	Field filterX:Float, filterY:Float  'Amount to filter the camera's position by default.  From [0-1).
@@ -49,10 +52,10 @@ Class Camera
 					filterAmt = Lerp(1, filterX, Clamp(Abs(dist / padw), 0.0, 1.0))
 					filterAmt = Snap(filterAmt)
 	
-					x = Xerp(o.FocalX + dist - (panw * sign), x, filterAmt)
+					x = Clamp(Xerp(o.FocalX + dist - (panw * sign), x, filterAmt), xConstraintMin + viewPortW / 2, xConstraintMax - viewPortW / 2)
 				ElseIf padw = 0  'No padding.
 					If Abs(dist) > panw Then filterAmt = filterX Else filterAmt = 1
-					x = Lerp(x + dist - (panw * sign), x, filterAmt)
+					x = Clamp(Lerp(x + dist - (panw * sign), x, filterAmt), xConstraintMin + viewPortW / 2, xConstraintMax - viewPortW / 2)
 				End If
 				
 				__filterX = filterAmt
@@ -67,10 +70,10 @@ Class Camera
 					filterAmt = Lerp(1, filterY, Clamp(Abs(dist / padh), 0.0, 1.0))
 					filterAmt = Snap(filterAmt)
 
-					y = Xerp(o.FocalY + dist - (panh * sign), y, filterAmt)
+					y = Clamp(Xerp(o.FocalY + dist - (panh * sign), y, filterAmt), yConstraintMin + viewPortH / 2, yConstraintMax - viewPortH / 2)
 				ElseIf padh = 0  'No padding.
 					If Abs(dist) >= panh Then filterAmt = filterY Else filterAmt = 1
-					y = Lerp(y + dist - (panh * sign), y, filterAmt)
+					y = Clamp(Lerp(y + dist - (panh * sign), y, filterAmt), yConstraintMin + viewPortH / 2, yConstraintMax - viewPortH / 2)
 				End If
 				
 				__filterY = filterAmt
@@ -131,6 +134,12 @@ Class Camera
 			amtY = -Pow( (Clamp(amtY, 0.0, 1.0) + 1), -7) + 1
 		End If
 		filterX = amtX; filterY = amtY
+	End Method
+	
+	'Summary:  Sets the position of the camera, respecting the constraints.
+	Method SetPos:Void(x:Float, y:Float)
+		Self.x = Clamp(x, xConstraintMin + viewPortW / 2, xConstraintMax - viewPortW / 2)
+		Self.y = Clamp(y, yConstraintMin + viewPortH / 2, yConstraintMax - viewPortH / 2)
 	End Method
 	
 	'Summary:  Snaps an amount based on filterSnap to 1.0 (no movement) if within range of the roam boundry.
